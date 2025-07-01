@@ -1,6 +1,6 @@
 import streamlit as st
+import streamlit.components.v1 as components
 import re
-
 
 # Set page config with blue accents and white bg
 st.set_page_config(page_title="💸 Debt Settlement Calculator", page_icon="💸", layout="centered")
@@ -24,6 +24,11 @@ st.markdown("""
         background-color: #09407d;
         border-color: #09407d;
     }
+    textarea[disabled] {
+    background-color: black !important;
+    color: white !important;
+    font-family: monospace !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -73,7 +78,7 @@ def merge_names(name_net_map, combined_names):
 # Step 1: Input data
 if st.session_state.step == "input":
     raw_input = st.text_area("Paste your player data below:", height=250, value=st.session_state.raw_input)
-    if st.button("Parse Data"):
+    if st.button("Calculate Ledger"):
         if not raw_input.strip():
             st.warning("Please enter some data!")
         else:
@@ -131,7 +136,6 @@ elif st.session_state.step == "duplicates":
             st.session_state.selected_for_combine = {}
 
 # Step 3: Show results
-# Step 3: Show results
 elif st.session_state.step == "results":
     nets = st.session_state.merged_nets
 
@@ -163,15 +167,33 @@ elif st.session_state.step == "results":
 
     # Format results into a single string with line breaks
     result_text = "\n".join(transactions)
-    st.text_area(
-        "Results (copy below):",
-        value=result_text,
-        height=200,
-        max_chars=None,
-        key="results_text_area",
-        disabled=True,  # read-only
-        help="You can easily select and copy this text on mobile or desktop."
-    )
+
+    # Display result text area
+    st.text_area("Results (copy below):", value=result_text, height=200, disabled=True)
+
+    # Escape backticks so JS string won't break
+    escaped_text = result_text.replace("`", "\\`")
+
+    # Copy to clipboard button using Streamlit components
+    components.html(f"""
+    <button
+        onclick="
+            navigator.clipboard.writeText(`{escaped_text}`)
+            .then(() => alert('Copied to clipboard!'));
+        "
+        style="
+            background-color: #0B3D91;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 8px 16px;
+            cursor: pointer;
+            margin-top: 10px;
+        "
+    >
+        📋 Copy to Clipboard
+    </button>
+    """, height=60)
 
     st.caption(f"Total transferred: ${int(total_transferred)}")
 
@@ -179,3 +201,4 @@ elif st.session_state.step == "results":
         for key in ["step", "combined_names", "nets", "merged_nets", "raw_input", "selected_for_combine"]:
             if key in st.session_state:
                 del st.session_state[key]
+        st.experimental_rerun()
